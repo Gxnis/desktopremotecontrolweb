@@ -12,8 +12,10 @@ const io = new Server(server, {
   },
   transports: ['websocket', 'polling'],
   path: '/socket.io/',
-  pingTimeout: 60000,
-  pingInterval: 25000
+  pingTimeout: 120000,
+  pingInterval: 50000,
+  upgradeTimeout: 30000,
+  maxHttpBufferSize: 1e6
 });
 
 app.use(express.static('client/dist'));
@@ -22,7 +24,11 @@ app.use(express.static('client/dist'));
 const rooms = new Map();
 
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+  console.log('Client connected:', socket.id, 'at', new Date().toISOString());
+  
+  socket.on('connect_error', (error) => {
+    console.log('Connection error:', socket.id, error);
+  });
 
   // Create a new room
   socket.on('create-room', () => {
@@ -148,8 +154,8 @@ io.on('connection', (socket) => {
   });
 
   // Disconnect
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
+  socket.on('disconnect', (reason) => {
+    console.log('Client disconnected:', socket.id, 'reason:', reason, 'at', new Date().toISOString());
     
     // Check if host disconnected
     for (const [code, room] of rooms.entries()) {
