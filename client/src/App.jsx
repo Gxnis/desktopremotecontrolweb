@@ -31,18 +31,26 @@ function App() {
 
   useEffect(() => {
     socket.on('connect', () => {
+      console.log('Socket connected');
       setIsConnected(true);
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
       setIsConnected(false);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.log('Socket connection error:', error);
+      setError('Connection error: ' + error.message);
     });
 
     socket.on('room-created', ({ roomCode: code }) => {
       setRoomCode(code);
       setIsHost(true);
       setStatus('Room created! Share this code to allow access.');
-      startScreenShare();
+      // Delay screen share to ensure connection is stable
+      setTimeout(() => startScreenShare(), 500);
     });
 
     socket.on('room-joined', ({ roomCode: code }) => {
@@ -153,41 +161,50 @@ function App() {
 
   const startScreenShare = async () => {
     try {
+      console.log('Starting screen share for room:', roomCode);
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { cursor: "always" },
         audio: false
       });
       
       localStreamRef.current = stream;
+      console.log('Screen share stream obtained');
       
       const peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       });
       
       peerConnectionRef.current = peerConnection;
+      console.log('Peer connection created');
       
       stream.getTracks().forEach(track => {
         peerConnection.addTrack(track, stream);
       });
+      console.log('Tracks added to peer connection');
       
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log('ICE candidate generated');
           socket.emit('ice-candidate', { roomCode, candidate: event.candidate });
         }
       };
       
       const offer = await peerConnection.createOffer();
+      console.log('Offer created');
       await peerConnection.setLocalDescription(offer);
+      console.log('Local description set');
       
       socket.emit('offer', { roomCode, offer });
+      console.log('Offer sent to server');
       
       stream.getVideoTracks()[0].onended = () => {
+        console.log('Screen sharing stopped by user');
         setStatus('Screen sharing stopped');
       };
       
     } catch (err) {
       console.error('Error starting screen share:', err);
-      setError('Failed to start screen share');
+      setError('Failed to start screen share: ' + err.message);
     }
   };
 
