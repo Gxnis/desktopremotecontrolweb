@@ -9,13 +9,7 @@ const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  },
-  transports: ['websocket', 'polling'],
-  path: '/socket.io/',
-  pingTimeout: 120000,
-  pingInterval: 50000,
-  upgradeTimeout: 30000,
-  maxHttpBufferSize: 1e6
+  }
 });
 
 app.use(express.static('client/dist'));

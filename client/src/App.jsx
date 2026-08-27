@@ -3,15 +3,7 @@ import { io } from 'socket.io-client';
 import { Monitor, Wifi, WifiOff, Copy, Check, Power, PowerOff, Maximize, Minimize, Shield, ShieldOff, Play } from 'lucide-react';
 import './App.css';
 
-const socket = io(window.location.origin, {
-  transports: ['websocket', 'polling'],
-  reconnection: true,
-  reconnectionAttempts: 10,
-  reconnectionDelay: 1000,
-  reconnectionDelayMax: 10000,
-  timeout: 20000,
-  forceNew: false
-});
+const socket = io(window.location.origin);
 
 function App() {
   const [roomCode, setRoomCode] = useState('');
