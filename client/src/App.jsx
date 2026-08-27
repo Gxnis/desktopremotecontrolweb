@@ -3,8 +3,6 @@ import { io } from 'socket.io-client';
 import { Monitor, Wifi, WifiOff, Copy, Check, Power, PowerOff, Maximize, Minimize, Shield, ShieldOff, Play } from 'lucide-react';
 import './App.css';
 
-const socket = io(window.location.origin);
-
 function App() {
   const [roomCode, setRoomCode] = useState('');
   const [inputCode, setInputCode] = useState('');
@@ -21,80 +19,84 @@ function App() {
   const videoRef = useRef(null);
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
+  const socketRef = useRef(null);
 
   useEffect(() => {
-    socket.on('connect', () => {
+    // Initialize socket inside useEffect
+    socketRef.current = io(window.location.origin);
+    
+    socketRef.current.on('connect', () => {
       console.log('Socket connected');
       setIsConnected(true);
     });
 
-    socket.on('disconnect', (reason) => {
+    socketRef.current.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
       setIsConnected(false);
     });
 
-    socket.on('connect_error', (error) => {
+    socketRef.current.on('connect_error', (error) => {
       console.log('Socket connection error:', error);
       setError('Connection error: ' + error.message);
     });
 
-    socket.on('room-created', ({ roomCode: code }) => {
+    socketRef.current.on('room-created', ({ roomCode: code }) => {
       setRoomCode(code);
       setIsHost(true);
       setStatus('Room created! Share this code to allow access. Click "Start Sharing" to begin.');
     });
 
-    socket.on('room-joined', ({ roomCode: code }) => {
+    socketRef.current.on('room-joined', ({ roomCode: code }) => {
       setRoomCode(code);
       setIsHost(false);
       setStatus('Connected to room. Waiting for screen share...');
       setupViewerConnection();
     });
 
-    socket.on('error', (msg) => {
+    socketRef.current.on('error', (msg) => {
       setError(msg);
       setTimeout(() => setError(''), 3000);
     });
 
-    socket.on('offer', async ({ offer, senderId }) => {
+    socketRef.current.on('offer', async ({ offer, senderId }) => {
       if (!isHost) {
         await handleOffer(offer);
       }
     });
 
-    socket.on('answer', async ({ answer }) => {
+    socketRef.current.on('answer', async ({ answer }) => {
       if (isHost && peerConnectionRef.current) {
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
       }
     });
 
-    socket.on('ice-candidate', async ({ candidate }) => {
+    socketRef.current.on('ice-candidate', async ({ candidate }) => {
       if (peerConnectionRef.current) {
         await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
       }
     });
 
-    socket.on('room-deactivated', () => {
+    socketRef.current.on('room-deactivated', () => {
       setIsActive(false);
       setStatus('Room has been deactivated by host');
     });
 
-    socket.on('room-activated', () => {
+    socketRef.current.on('room-activated', () => {
       setIsActive(true);
       setStatus('Room has been reactivated');
     });
 
-    socket.on('control-enabled', () => {
+    socketRef.current.on('control-enabled', () => {
       setAllowControl(true);
       setStatus('Remote control enabled');
     });
 
-    socket.on('control-disabled', () => {
+    socketRef.current.on('control-disabled', () => {
       setAllowControl(false);
       setStatus('Remote control disabled');
     });
 
-    socket.on('host-disconnected', () => {
+    socketRef.current.on('host-disconnected', () => {
       setError('Host disconnected');
       setRoomCode('');
       setIsHost(false);
@@ -104,17 +106,19 @@ function App() {
     });
 
     return () => {
-      socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
     };
   }, [isHost]);
 
   const createRoom = () => {
-    socket.emit('create-room');
+    socketRef.current.emit('create-room');
   };
 
   const joinRoom = () => {
     if (inputCode.trim()) {
-      socket.emit('join-room', { roomCode: inputCode.trim().toUpperCase() });
+      socketRef.current.emit('join-room', { roomCode: inputCode.trim().toUpperCase() });
     }
   };
 
@@ -126,15 +130,15 @@ function App() {
 
   const toggleRoom = () => {
     if (isActive) {
-      socket.emit('deactivate-room', { roomCode });
+      socketRef.current.emit('deactivate-room', { roomCode });
     } else {
-      socket.emit('activate-room', { roomCode });
+      socketRef.current.emit('activate-room', { roomCode });
     }
     setIsActive(!isActive);
   };
 
   const toggleControl = () => {
-    socket.emit('toggle-control', { roomCode, enabled: !allowControl });
+    socketRef.current.emit('toggle-control', { roomCode, enabled: !allowControl });
     setAllowControl(!allowControl);
   };
 
@@ -179,7 +183,7 @@ function App() {
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
           console.log('ICE candidate generated');
-          socket.emit('ice-candidate', { roomCode, candidate: event.candidate });
+          socketRef.current.emit('ice-candidate', { roomCode, candidate: event.candidate });
         }
       };
       
@@ -188,7 +192,7 @@ function App() {
       await peerConnection.setLocalDescription(offer);
       console.log('Local description set');
       
-      socket.emit('offer', { roomCode, offer });
+      socketRef.current.emit('offer', { roomCode, offer });
       console.log('Offer sent to server');
       setStatus('Screen sharing active');
       
@@ -216,7 +220,7 @@ function App() {
       
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          socket.emit('ice-candidate', { roomCode, candidate: event.candidate });
+          socketRef.current.emit('ice-candidate', { roomCode, candidate: event.candidate });
         }
       };
       
@@ -237,7 +241,7 @@ function App() {
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnectionRef.current.createAnswer();
       await peerConnectionRef.current.setLocalDescription(answer);
-      socket.emit('answer', { roomCode, answer });
+      socketRef.current.emit('answer', { roomCode, answer });
     } catch (err) {
       console.error('Error handling offer:', err);
     }
@@ -248,7 +252,7 @@ function App() {
       const rect = videoRef.current.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
       const y = (e.clientY - rect.top) / rect.height;
-      socket.emit('mouse-move', { roomCode, x, y });
+      socketRef.current.emit('mouse-move', { roomCode, x, y });
     }
   };
 
@@ -257,13 +261,13 @@ function App() {
       const rect = videoRef.current.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
       const y = (e.clientY - rect.top) / rect.height;
-      socket.emit('mouse-click', { roomCode, button: e.button, x, y });
+      socketRef.current.emit('mouse-click', { roomCode, button: e.button, x, y });
     }
   };
 
   const sendKeyboard = (e) => {
     if (!isHost && allowControl) {
-      socket.emit('keyboard', { roomCode, key: e.key, keyCode: e.keyCode });
+      socketRef.current.emit('keyboard', { roomCode, key: e.key, keyCode: e.keyCode });
     }
   };
 
