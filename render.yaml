@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: remote-desktop
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_VERSION
+        value: 18
+    numInstances: 1
