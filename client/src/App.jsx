@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { Monitor, Wifi, WifiOff, Copy, Check, Power, PowerOff, Maximize, Minimize, Shield, ShieldOff } from 'lucide-react';
+import { Monitor, Wifi, WifiOff, Copy, Check, Power, PowerOff, Maximize, Minimize, Shield, ShieldOff, Play } from 'lucide-react';
 import './App.css';
 
 const socket = io(window.location.origin, {
@@ -21,6 +21,7 @@ function App() {
   const [isActive, setIsActive] = useState(true);
   const [allowControl, setAllowControl] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
@@ -48,9 +49,7 @@ function App() {
     socket.on('room-created', ({ roomCode: code }) => {
       setRoomCode(code);
       setIsHost(true);
-      setStatus('Room created! Share this code to allow access.');
-      // Delay screen share to ensure connection is stable
-      setTimeout(() => startScreenShare(), 500);
+      setStatus('Room created! Share this code to allow access. Click "Start Sharing" to begin.');
     });
 
     socket.on('room-joined', ({ roomCode: code }) => {
@@ -162,6 +161,9 @@ function App() {
   const startScreenShare = async () => {
     try {
       console.log('Starting screen share for room:', roomCode);
+      setIsSharing(true);
+      setStatus('Starting screen share...');
+      
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: { cursor: "always" },
         audio: false
@@ -196,15 +198,19 @@ function App() {
       
       socket.emit('offer', { roomCode, offer });
       console.log('Offer sent to server');
+      setStatus('Screen sharing active');
       
       stream.getVideoTracks()[0].onended = () => {
         console.log('Screen sharing stopped by user');
+        setIsSharing(false);
         setStatus('Screen sharing stopped');
       };
       
     } catch (err) {
       console.error('Error starting screen share:', err);
+      setIsSharing(false);
       setError('Failed to start screen share: ' + err.message);
+      setStatus('Failed to start screen share');
     }
   };
 
@@ -352,6 +358,16 @@ function App() {
                 </div>
                 
                 <div className="flex items-center gap-2">
+                  {isHost && !isSharing && (
+                    <button
+                      onClick={startScreenShare}
+                      className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+                    >
+                      <Play className="w-5 h-5" />
+                      Start Sharing
+                    </button>
+                  )}
+                  
                   {isHost && (
                     <button
                       onClick={toggleControl}
