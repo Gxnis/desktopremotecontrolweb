@@ -203,7 +203,12 @@ function App() {
       setStatus('Starting screen share...');
       
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: "always" },
+        video: { 
+          cursor: "always",
+          frameRate: { ideal: 30, max: 60 },
+          width: { ideal: 1920, max: 2560 },
+          height: { ideal: 1080, max: 1440 }
+        },
         audio: false
       });
       
@@ -290,6 +295,10 @@ function App() {
           
           videoRef.current.onloadedmetadata = () => {
             console.log('Video metadata loaded, dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+            console.log('Video element dimensions:', videoRef.current.offsetWidth, 'x', videoRef.current.offsetHeight);
+            console.log('Video element display:', window.getComputedStyle(videoRef.current).display);
+            console.log('Video element visibility:', window.getComputedStyle(videoRef.current).visibility);
+            console.log('Video element opacity:', window.getComputedStyle(videoRef.current).opacity);
             setVideoLoaded(true);
           };
           
