@@ -287,14 +287,15 @@ function App() {
         if (videoRef.current) {
           console.log('Video ref exists, setting srcObject');
           videoRef.current.srcObject = event.streams[0];
-          setVideoLoaded(true);
           
           videoRef.current.onloadedmetadata = () => {
             console.log('Video metadata loaded, dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+            setVideoLoaded(true);
           };
           
           videoRef.current.onplay = () => {
             console.log('Video started playing');
+            setVideoLoaded(true);
           };
           
           videoRef.current.onerror = (e) => {
@@ -305,6 +306,7 @@ function App() {
           
           videoRef.current.play().then(() => {
             console.log('Video play() succeeded');
+            setVideoLoaded(true);
             setStatus('Screen share connected');
           }).catch(err => {
             console.error('Video play() error:', err);
