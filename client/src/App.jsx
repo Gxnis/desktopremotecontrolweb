@@ -51,10 +51,11 @@ function App() {
     });
 
     socketRef.current.on('room-joined', ({ roomCode: code }) => {
+      console.log('Room joined with code:', code);
       setRoomCode(code);
       setIsHost(false);
       setStatus('Connected to room. Waiting for screen share...');
-      setupViewerConnection();
+      setupViewerConnection(code);
     });
 
     socketRef.current.on('error', (msg) => {
@@ -64,7 +65,7 @@ function App() {
 
     socketRef.current.on('offer', async ({ offer, senderId }) => {
       if (!isHost) {
-        await handleOffer(offer);
+        await handleOffer(offer, roomCode);
       }
     });
 
@@ -234,9 +235,9 @@ function App() {
     }
   };
 
-  const setupViewerConnection = async () => {
+  const setupViewerConnection = async (roomCodeParam) => {
     try {
-      console.log('Setting up viewer connection for room:', roomCode);
+      console.log('Setting up viewer connection for room:', roomCodeParam);
       const peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       });
@@ -246,8 +247,8 @@ function App() {
       
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log('Viewer ICE candidate generated');
-          socketRef.current.emit('ice-candidate', { roomCode, candidate: event.candidate });
+          console.log('Viewer ICE candidate generated for room:', roomCodeParam);
+          socketRef.current.emit('ice-candidate', { roomCode: roomCodeParam, candidate: event.candidate });
         }
       };
       
@@ -281,12 +282,14 @@ function App() {
     }
   };
 
-  const handleOffer = async (offer) => {
+  const handleOffer = async (offer, roomCodeParam) => {
     try {
+      console.log('Handling offer for room:', roomCodeParam);
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnectionRef.current.createAnswer();
       await peerConnectionRef.current.setLocalDescription(answer);
-      socketRef.current.emit('answer', { roomCode, answer });
+      console.log('Sending answer for room:', roomCodeParam);
+      socketRef.current.emit('answer', { roomCode: roomCodeParam, answer });
     } catch (err) {
       console.error('Error handling offer:', err);
     }
