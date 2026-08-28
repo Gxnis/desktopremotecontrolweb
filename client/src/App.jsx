@@ -16,6 +16,7 @@ function App() {
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [previousRoomCode, setPreviousRoomCode] = useState('');
+  const [videoLoaded, setVideoLoaded] = useState(false);
   
   const videoRef = useRef(null);
   const peerConnectionRef = useRef(null);
@@ -148,12 +149,23 @@ function App() {
   const toggleFullscreen = () => {
     if (!isFullscreen) {
       if (videoRef.current) {
-        videoRef.current.requestFullscreen();
-        setIsFullscreen(true);
+        videoRef.current.requestFullscreen().then(() => {
+          setIsFullscreen(true);
+        }).catch(err => {
+          console.error('Fullscreen error:', err);
+        });
       }
     } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
+      if (document.fullscreenElement) {
+        document.exitFullscreen().then(() => {
+          setIsFullscreen(false);
+        }).catch(err => {
+          console.error('Exit fullscreen error:', err);
+          setIsFullscreen(false);
+        });
+      } else {
+        setIsFullscreen(false);
+      }
     }
   };
 
@@ -240,10 +252,17 @@ function App() {
       };
       
       peerConnection.ontrack = (event) => {
-        console.log('Viewer received track');
+        console.log('Viewer received track', event.streams[0]);
         if (videoRef.current) {
           videoRef.current.srcObject = event.streams[0];
-          setStatus('Screen share connected');
+          setVideoLoaded(true);
+          videoRef.current.play().then(() => {
+            console.log('Video started playing');
+            setStatus('Screen share connected');
+          }).catch(err => {
+            console.error('Video play error:', err);
+            setStatus('Screen share connected (video may need interaction)');
+          });
         }
       };
       
@@ -463,20 +482,23 @@ function App() {
                       ref={videoRef}
                       autoPlay
                       playsInline
+                      muted
                       className="w-full h-full object-contain"
                       onMouseMove={sendMouseMove}
                       onMouseDown={sendMouseClick}
                       onKeyDown={sendKeyboard}
                       tabIndex={0}
+                      style={{ display: 'block' }}
                     />
-                    {!videoRef.current?.srcObject && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <div className="text-center">
-                          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                          <p className="text-gray-300">Waiting for host to start sharing...</p>
-                        </div>
+                    <div 
+                      id="video-overlay" 
+                      className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${videoLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                    >
+                      <div className="text-center">
+                        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                        <p className="text-gray-300">Waiting for host to start sharing...</p>
                       </div>
-                    )}
+                    </div>
                   </>
                 )}
               </div>
