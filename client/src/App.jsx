@@ -258,16 +258,37 @@ function App() {
       
       peerConnection.ontrack = (event) => {
         console.log('Viewer received track', event.streams[0]);
+        console.log('Track kind:', event.track.kind);
+        console.log('Stream tracks:', event.streams[0].getTracks());
+        
         if (videoRef.current) {
+          console.log('Video ref exists, setting srcObject');
           videoRef.current.srcObject = event.streams[0];
           setVideoLoaded(true);
-          videoRef.current.play().then(() => {
+          
+          videoRef.current.onloadedmetadata = () => {
+            console.log('Video metadata loaded, dimensions:', videoRef.current.videoWidth, 'x', videoRef.current.videoHeight);
+          };
+          
+          videoRef.current.onplay = () => {
             console.log('Video started playing');
+          };
+          
+          videoRef.current.onerror = (e) => {
+            console.error('Video error:', e);
+            console.error('Video error code:', videoRef.current.error?.code);
+            console.error('Video error message:', videoRef.current.error?.message);
+          };
+          
+          videoRef.current.play().then(() => {
+            console.log('Video play() succeeded');
             setStatus('Screen share connected');
           }).catch(err => {
-            console.error('Video play error:', err);
+            console.error('Video play() error:', err);
             setStatus('Screen share connected (video may need interaction)');
           });
+        } else {
+          console.error('Video ref does not exist!');
         }
       };
       
