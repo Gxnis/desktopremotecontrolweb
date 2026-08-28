@@ -25,22 +25,12 @@ function App() {
   useEffect(() => {
     // Initialize socket inside useEffect
     socketRef.current = io(window.location.origin, {
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000
+      transports: ['polling']
     });
     
     socketRef.current.on('connect', () => {
       console.log('Socket connected');
       setIsConnected(true);
-      // Start keep-alive ping
-      const pingInterval = setInterval(() => {
-        if (socketRef.current && socketRef.current.connected) {
-          socketRef.current.emit('ping');
-        }
-      }, 30000); // Ping every 30 seconds
-      
-      return () => clearInterval(pingInterval);
     });
 
     socketRef.current.on('disconnect', (reason) => {
@@ -51,20 +41,6 @@ function App() {
     socketRef.current.on('connect_error', (error) => {
       console.log('Socket connection error:', error);
       setError('Connection error: ' + error.message);
-    });
-
-    socketRef.current.on('pong', () => {
-      console.log('Pong received - connection alive');
-    });
-
-    socketRef.current.on('host-temporarily-disconnected', () => {
-      console.log('Host temporarily disconnected');
-      setStatus('Connection interrupted. Reconnecting...');
-    });
-
-    socketRef.current.on('host-reconnected', ({ roomCode }) => {
-      console.log('Host reconnected to room:', roomCode);
-      setStatus('Reconnected to room');
     });
 
     socketRef.current.on('room-created', ({ roomCode: code }) => {
@@ -137,7 +113,7 @@ function App() {
         socketRef.current.disconnect();
       }
     };
-  }, [isHost]);
+  }, []);
 
   const createRoom = () => {
     socketRef.current.emit('create-room');

@@ -9,7 +9,8 @@ const io = new Server(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"]
-  }
+  },
+  transports: ['polling']
 });
 
 app.use(express.static('client/dist'));
@@ -24,22 +25,6 @@ io.on('connection', (socket) => {
     console.log('Connection error:', socket.id, error);
   });
 
-  // Handle reconnection - check if this socket was previously a host
-  socket.on('reconnect-host', ({ roomCode }) => {
-    const room = rooms.get(roomCode);
-    if (room && room.gracePeriodTimeout) {
-      // Clear the grace period timeout
-      clearTimeout(room.gracePeriodTimeout);
-      room.gracePeriodTimeout = null;
-      room.host = socket.id; // Update host to new socket ID
-      rooms.set(roomCode, room);
-      
-      socket.join(roomCode);
-      socket.emit('host-reconnected', { roomCode });
-      console.log('Host reconnected to room:', roomCode, 'with new socket:', socket.id);
-    }
-  });
-
   // Create a new room
   socket.on('create-room', () => {
     const roomCode = uuidv4().substring(0, 6).toUpperCase();
@@ -48,8 +33,7 @@ io.on('connection', (socket) => {
       viewers: [],
       active: true,
       controlEnabled: false,
-      createdAt: Date.now(),
-      gracePeriodTimeout: null
+      createdAt: Date.now()
     });
     
     socket.join(roomCode);
@@ -168,31 +152,12 @@ io.on('connection', (socket) => {
   socket.on('disconnect', (reason) => {
     console.log('Client disconnected:', socket.id, 'reason:', reason, 'at', new Date().toISOString());
     
-    // Check if host disconnected - add grace period before deletion
+    // Check if host disconnected
     for (const [code, room] of rooms.entries()) {
       if (room.host === socket.id) {
-        // Clear any existing grace period timeout
-        if (room.gracePeriodTimeout) {
-          clearTimeout(room.gracePeriodTimeout);
-        }
-        
-        // Set a timeout to delete the room after 30 seconds (allows reconnection)
-        const timeoutId = setTimeout(() => {
-          const currentRoom = rooms.get(code);
-          if (currentRoom && currentRoom.host === socket.id) {
-            // Host hasn't reconnected, delete the room
-            io.to(code).emit('host-disconnected');
-            rooms.delete(code);
-            console.log('Room deleted after grace period:', code);
-          }
-        }, 30000); // 30 second grace period
-        
-        // Update room with the timeout reference
-        room.gracePeriodTimeout = timeoutId;
-        rooms.set(code, room);
-        
-        io.to(code).emit('host-temporarily-disconnected');
-        console.log('Host temporarily disconnected, room kept for 30 seconds:', code);
+        io.to(code).emit('host-disconnected');
+        rooms.delete(code);
+        console.log('Room deleted:', code);
         break;
       }
       
