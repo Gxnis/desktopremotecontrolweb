@@ -71,23 +71,35 @@ io.on('connection', (socket) => {
 
   // Screen sharing data (WebRTC signaling)
   socket.on('offer', ({ roomCode, offer }) => {
+    console.log('Offer received for room:', roomCode, 'from socket:', socket.id);
     const room = rooms.get(roomCode);
     if (room) {
       socket.to(roomCode).emit('offer', { offer, senderId: socket.id });
+      console.log('Offer forwarded to room:', roomCode);
+    } else {
+      console.log('Room not found for offer:', roomCode);
     }
   });
 
   socket.on('answer', ({ roomCode, answer }) => {
+    console.log('Answer received for room:', roomCode, 'from socket:', socket.id);
     const room = rooms.get(roomCode);
     if (room) {
       socket.to(roomCode).emit('answer', { answer, senderId: socket.id });
+      console.log('Answer forwarded to room:', roomCode);
+    } else {
+      console.log('Room not found for answer:', roomCode);
     }
   });
 
   socket.on('ice-candidate', ({ roomCode, candidate }) => {
+    console.log('ICE candidate received for room:', roomCode, 'from socket:', socket.id);
     const room = rooms.get(roomCode);
     if (room) {
       socket.to(roomCode).emit('ice-candidate', { candidate, senderId: socket.id });
+      console.log('ICE candidate forwarded to room:', roomCode);
+    } else {
+      console.log('Room not found for ICE candidate:', roomCode);
     }
   });
 
