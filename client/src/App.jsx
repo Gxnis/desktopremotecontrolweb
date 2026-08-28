@@ -23,6 +23,7 @@ function App() {
   const localStreamRef = useRef(null);
   const socketRef = useRef(null);
   const roomCodeRef = useRef(null);
+  const iceCandidatesRef = useRef([]);
 
   useEffect(() => {
     // Initialize socket inside useEffect
@@ -75,12 +76,34 @@ function App() {
     socketRef.current.on('answer', async ({ answer }) => {
       if (isHost && peerConnectionRef.current) {
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
+        console.log('Host remote description set');
+        // Add any stored ICE candidates
+        while (iceCandidatesRef.current.length > 0) {
+          const candidate = iceCandidatesRef.current.shift();
+          try {
+            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log('Stored ICE candidate added after remote description');
+          } catch (err) {
+            console.error('Error adding stored ICE candidate:', err);
+          }
+        }
       }
     });
 
     socketRef.current.on('ice-candidate', async ({ candidate }) => {
       if (peerConnectionRef.current) {
-        await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+        try {
+          if (peerConnectionRef.current.remoteDescription) {
+            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+            console.log('ICE candidate added immediately');
+          } else {
+            // Store candidate for later when remote description is set
+            iceCandidatesRef.current.push(candidate);
+            console.log('ICE candidate stored for later, total stored:', iceCandidatesRef.current.length);
+          }
+        } catch (err) {
+          console.error('Error adding ICE candidate:', err);
+        }
       }
     });
 
@@ -312,10 +335,25 @@ function App() {
       const currentRoomCode = roomCodeRef.current;
       console.log('Handling offer for room:', currentRoomCode);
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
+      console.log('Viewer remote description set');
+      
       const answer = await peerConnectionRef.current.createAnswer();
       await peerConnectionRef.current.setLocalDescription(answer);
+      console.log('Viewer local description set');
+      
       console.log('Sending answer for room:', currentRoomCode);
       socketRef.current.emit('answer', { roomCode: currentRoomCode, answer });
+      
+      // Add any stored ICE candidates
+      while (iceCandidatesRef.current.length > 0) {
+        const candidate = iceCandidatesRef.current.shift();
+        try {
+          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
+          console.log('Stored ICE candidate added after remote description (viewer)');
+        } catch (err) {
+          console.error('Error adding stored ICE candidate (viewer):', err);
+        }
+      }
     } catch (err) {
       console.error('Error handling offer:', err);
     }
