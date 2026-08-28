@@ -555,29 +555,23 @@ function App() {
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-contain"
-                      onMouseMove={sendMouseMove}
-                      onMouseDown={sendMouseClick}
-                      onKeyDown={sendKeyboard}
-                      tabIndex={0}
-                      style={{ display: 'block' }}
-                    />
-                    <div 
-                      id="video-overlay" 
-                      className={`absolute inset-0 flex items-center justify-center bg-black/50 transition-opacity duration-300 ${videoLoaded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-                    >
-                      <div className="text-center">
-                        <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                        <p className="text-gray-300">Waiting for host to start sharing...</p>
-                      </div>
-                    </div>
-                  </>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-contain"
+                    style={{ 
+                      display: 'block',
+                      visibility: 'visible',
+                      opacity: '1',
+                      backgroundColor: '#000'
+                    }}
+                    onMouseMove={sendMouseMove}
+                    onMouseDown={sendMouseClick}
+                    onKeyDown={sendKeyboard}
+                    tabIndex={0}
+                  />
                 )}
               </div>
                 {!isActive && (
