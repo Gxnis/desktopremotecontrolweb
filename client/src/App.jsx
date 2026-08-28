@@ -190,6 +190,15 @@ function App() {
         }
       };
       
+      peerConnection.onconnectionstatechange = () => {
+        console.log('Host connection state:', peerConnection.connectionState);
+        if (peerConnection.connectionState === 'connected') {
+          setStatus('Screen sharing active - connected to viewer');
+        } else if (peerConnection.connectionState === 'disconnected') {
+          setStatus('Screen sharing disconnected');
+        }
+      };
+      
       const offer = await peerConnection.createOffer();
       console.log('Offer created');
       await peerConnection.setLocalDescription(offer);
@@ -197,7 +206,7 @@ function App() {
       
       socketRef.current.emit('offer', { roomCode, offer });
       console.log('Offer sent to server');
-      setStatus('Screen sharing active');
+      setStatus('Screen sharing active - waiting for viewer...');
       
       stream.getVideoTracks()[0].onended = () => {
         console.log('Screen sharing stopped by user');
@@ -215,21 +224,35 @@ function App() {
 
   const setupViewerConnection = async () => {
     try {
+      console.log('Setting up viewer connection for room:', roomCode);
       const peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       });
       
       peerConnectionRef.current = peerConnection;
+      console.log('Viewer peer connection created');
       
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log('Viewer ICE candidate generated');
           socketRef.current.emit('ice-candidate', { roomCode, candidate: event.candidate });
         }
       };
       
       peerConnection.ontrack = (event) => {
+        console.log('Viewer received track');
         if (videoRef.current) {
           videoRef.current.srcObject = event.streams[0];
+          setStatus('Screen share connected');
+        }
+      };
+      
+      peerConnection.onconnectionstatechange = () => {
+        console.log('Viewer connection state:', peerConnection.connectionState);
+        if (peerConnection.connectionState === 'connected') {
+          setStatus('Screen share connected');
+        } else if (peerConnection.connectionState === 'disconnected') {
+          setStatus('Screen share disconnected');
         }
       };
       
@@ -419,29 +442,49 @@ function App() {
                 {isHost ? (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center">
-                      <Monitor className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                      <p className="text-gray-500">Your screen is being shared</p>
+                      {isSharing ? (
+                        <>
+                          <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                          <p className="text-green-400 font-semibold">Screen sharing active</p>
+                          <p className="text-gray-500 text-sm mt-2">Your screen is visible to viewers</p>
+                        </>
+                      ) : (
+                        <>
+                          <Monitor className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                          <p className="text-gray-400">Click "Start Sharing" to begin</p>
+                          <p className="text-gray-500 text-sm mt-2">Your screen will be shared with viewers</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <video
-                    ref={videoRef}
-                    autoPlay
-                    playsInline
-                    className="w-full h-full object-contain"
-                    onMouseMove={sendMouseMove}
-                    onMouseDown={sendMouseClick}
-                    onKeyDown={sendKeyboard}
-                    tabIndex={0}
-                  />
+                  <>
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      className="w-full h-full object-contain"
+                      onMouseMove={sendMouseMove}
+                      onMouseDown={sendMouseClick}
+                      onKeyDown={sendKeyboard}
+                      tabIndex={0}
+                    />
+                    {!videoRef.current?.srcObject && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <div className="text-center">
+                          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                          <p className="text-gray-300">Waiting for host to start sharing...</p>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
-                
+              </div>
                 {!isActive && (
                   <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
                     <p className="text-white text-xl font-semibold">Room is inactive</p>
                   </div>
                 )}
-              </div>
 
               {/* Instructions */}
               <div className="mt-6 p-4 bg-gray-700/30 rounded-lg">
