@@ -22,6 +22,7 @@ function App() {
   const peerConnectionRef = useRef(null);
   const localStreamRef = useRef(null);
   const socketRef = useRef(null);
+  const roomCodeRef = useRef(null);
 
   useEffect(() => {
     // Initialize socket inside useEffect
@@ -46,6 +47,7 @@ function App() {
 
     socketRef.current.on('room-created', ({ roomCode: code }) => {
       setRoomCode(code);
+      roomCodeRef.current = code;
       setIsHost(true);
       setStatus('Room created! Share this code to allow access. Click "Start Sharing" to begin.');
     });
@@ -53,9 +55,10 @@ function App() {
     socketRef.current.on('room-joined', ({ roomCode: code }) => {
       console.log('Room joined with code:', code);
       setRoomCode(code);
+      roomCodeRef.current = code;
       setIsHost(false);
       setStatus('Connected to room. Waiting for screen share...');
-      setupViewerConnection(code);
+      setupViewerConnection();
     });
 
     socketRef.current.on('error', (msg) => {
@@ -65,7 +68,7 @@ function App() {
 
     socketRef.current.on('offer', async ({ offer, senderId }) => {
       if (!isHost) {
-        await handleOffer(offer, roomCode);
+        await handleOffer(offer);
       }
     });
 
@@ -235,9 +238,10 @@ function App() {
     }
   };
 
-  const setupViewerConnection = async (roomCodeParam) => {
+  const setupViewerConnection = async () => {
     try {
-      console.log('Setting up viewer connection for room:', roomCodeParam);
+      const currentRoomCode = roomCodeRef.current;
+      console.log('Setting up viewer connection for room:', currentRoomCode);
       const peerConnection = new RTCPeerConnection({
         iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
       });
@@ -247,8 +251,8 @@ function App() {
       
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log('Viewer ICE candidate generated for room:', roomCodeParam);
-          socketRef.current.emit('ice-candidate', { roomCode: roomCodeParam, candidate: event.candidate });
+          console.log('Viewer ICE candidate generated for room:', currentRoomCode);
+          socketRef.current.emit('ice-candidate', { roomCode: currentRoomCode, candidate: event.candidate });
         }
       };
       
@@ -282,14 +286,15 @@ function App() {
     }
   };
 
-  const handleOffer = async (offer, roomCodeParam) => {
+  const handleOffer = async (offer) => {
     try {
-      console.log('Handling offer for room:', roomCodeParam);
+      const currentRoomCode = roomCodeRef.current;
+      console.log('Handling offer for room:', currentRoomCode);
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnectionRef.current.createAnswer();
       await peerConnectionRef.current.setLocalDescription(answer);
-      console.log('Sending answer for room:', roomCodeParam);
-      socketRef.current.emit('answer', { roomCode: roomCodeParam, answer });
+      console.log('Sending answer for room:', currentRoomCode);
+      socketRef.current.emit('answer', { roomCode: currentRoomCode, answer });
     } catch (err) {
       console.error('Error handling offer:', err);
     }
