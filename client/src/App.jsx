@@ -223,6 +223,7 @@ function App() {
 
   const sendMouseClick = (e) => {
     if (!isHost && allowControl && videoRef.current) {
+      e.preventDefault(); // Prevent video pause/play on click
       const rect = videoRef.current.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
       const y = (e.clientY - rect.top) / rect.height;
@@ -248,7 +249,12 @@ function App() {
     try {
       setStatus('Starting screen share...');
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: { cursor: "always", frameRate: 30 },
+        video: { 
+          cursor: "always",
+          frameRate: { ideal: 60, max: 60 },
+          width: { ideal: 2560, max: 3840 },
+          height: { ideal: 1440, max: 2160 }
+        },
         audio: false
       });
       
@@ -480,6 +486,8 @@ function App() {
                     onMouseDown={sendMouseClick}
                     onKeyDown={sendKeyboard}
                     tabIndex={0}
+                    controlsList="nodownload nofullscreen noremoteplayback"
+                    disablePictureInPicture
                   />
                 )}
               </div>
