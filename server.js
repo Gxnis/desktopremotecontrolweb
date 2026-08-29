@@ -66,6 +66,19 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle remote control events on host side
+  socket.on('mouse-move', ({ x, y }) => {
+    // Host will handle this to move cursor
+  });
+
+  socket.on('mouse-click', ({ button, x, y }) => {
+    // Host will handle this to simulate click
+  });
+
+  socket.on('keyboard', ({ key, keyCode }) => {
+    // Host will handle this to simulate keyboard input
+  });
+
   // Toggle control
   socket.on('toggle-control', ({ roomCode, enabled }) => {
     const room = rooms.get(roomCode);

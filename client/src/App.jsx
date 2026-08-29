@@ -13,6 +13,7 @@ function App() {
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
   const [allowControl, setAllowControl] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   const videoRef = useRef(null);
   const peerRef = useRef(null);
@@ -84,6 +85,23 @@ function App() {
       setStatus(enabled ? 'Remote control enabled' : 'Remote control disabled');
     });
 
+    socketRef.current.on('remote-control', ({ type, data }) => {
+      if (isHost) {
+        if (type === 'mouse-move') {
+          // Move mouse cursor on host
+          const screenX = data.x * window.screen.width;
+          const screenY = data.y * window.screen.height;
+          console.log('Remote mouse move:', screenX, screenY);
+        } else if (type === 'mouse-click') {
+          // Simulate mouse click on host
+          console.log('Remote mouse click:', data.button, data.x, data.y);
+        } else if (type === 'keyboard') {
+          // Simulate keyboard input on host
+          console.log('Remote keyboard:', data.key, data.keyCode);
+        }
+      }
+    });
+
     socketRef.current.on('error', (msg) => {
       setError(msg);
       setTimeout(() => setError(''), 3000);
@@ -112,6 +130,65 @@ function App() {
 
   const toggleControl = () => {
     socketRef.current.emit('toggle-control', { roomCode: roomCodeRef.current, enabled: !allowControl });
+  };
+
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      if (videoRef.current) {
+        videoRef.current.requestFullscreen().then(() => {
+          setIsFullscreen(true);
+        }).catch(err => {
+          console.error('Fullscreen error:', err);
+        });
+      }
+    } else {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().then(() => {
+          setIsFullscreen(false);
+        }).catch(err => {
+          console.error('Exit fullscreen error:', err);
+          setIsFullscreen(false);
+        });
+      } else {
+        setIsFullscreen(false);
+      }
+    }
+  };
+
+  const sendMouseMove = (e) => {
+    if (!isHost && allowControl && videoRef.current) {
+      const rect = videoRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      socketRef.current.emit('remote-control', { 
+        roomCode: roomCodeRef.current, 
+        type: 'mouse-move', 
+        data: { x, y } 
+      });
+    }
+  };
+
+  const sendMouseClick = (e) => {
+    if (!isHost && allowControl && videoRef.current) {
+      const rect = videoRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      socketRef.current.emit('remote-control', { 
+        roomCode: roomCodeRef.current, 
+        type: 'mouse-click', 
+        data: { button: e.button, x, y } 
+      });
+    }
+  };
+
+  const sendKeyboard = (e) => {
+    if (!isHost && allowControl) {
+      socketRef.current.emit('remote-control', { 
+        roomCode: roomCodeRef.current, 
+        type: 'keyboard', 
+        data: { key: e.key, keyCode: e.keyCode } 
+      });
+    }
   };
 
   const startScreenShare = async () => {
@@ -297,6 +374,16 @@ function App() {
                       {allowControl ? 'Control On' : 'Control Off'}
                     </button>
                   )}
+                  
+                  {!isHost && (
+                    <button
+                      onClick={toggleFullscreen}
+                      className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+                    >
+                      {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                      {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -328,6 +415,10 @@ function App() {
                     playsInline
                     muted
                     className="w-full h-full object-contain"
+                    onMouseMove={sendMouseMove}
+                    onMouseDown={sendMouseClick}
+                    onKeyDown={sendKeyboard}
+                    tabIndex={0}
                   />
                 )}
               </div>
