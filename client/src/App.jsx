@@ -242,6 +242,7 @@ function App() {
     if (!isHost && allowControl && videoRef.current) {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation();
       
       const rect = videoRef.current.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
@@ -252,6 +253,15 @@ function App() {
         type: 'mouse-click', 
         data: { button: e.button, x, y } 
       });
+    }
+  };
+
+  const handleVideoClick = (e) => {
+    if (!isHost && allowControl) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      return false;
     }
   };
 
@@ -511,8 +521,10 @@ function App() {
                     className="w-full h-full object-contain"
                     onMouseMove={sendMouseMove}
                     onMouseDown={sendMouseClick}
+                    onClickCapture={handleVideoClick}
                     onContextMenu={handleContextMenu}
                     onKeyDown={sendKeyboard}
+                    onDoubleClickCapture={handleVideoClick}
                     tabIndex={0}
                     controlsList="nodownload nofullscreen noremoteplayback"
                     disablePictureInPicture
