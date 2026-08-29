@@ -92,13 +92,16 @@ function App() {
           const screenX = data.x * window.screen.width;
           const screenY = data.y * window.screen.height;
           
-          // Create and dispatch mouse move event
+          // Create and dispatch mouse move event at the correct screen position
           const mouseEvent = new MouseEvent('mousemove', {
             clientX: screenX,
             clientY: screenY,
+            screenX: screenX,
+            screenY: screenY,
             bubbles: true,
             cancelable: true
           });
+          document.elementFromPoint(screenX, screenY)?.dispatchEvent(mouseEvent);
           document.dispatchEvent(mouseEvent);
           
         } else if (type === 'mouse-click') {
@@ -106,31 +109,45 @@ function App() {
           const screenX = data.x * window.screen.width;
           const screenY = data.y * window.screen.height;
           
+          const targetElement = document.elementFromPoint(screenX, screenY);
+          
           const clickEvent = new MouseEvent('click', {
             clientX: screenX,
             clientY: screenY,
+            screenX: screenX,
+            screenY: screenY,
             button: data.button,
             bubbles: true,
             cancelable: true
           });
-          document.dispatchEvent(clickEvent);
           
-          // Also dispatch mousedown and mouseup
           const downEvent = new MouseEvent('mousedown', {
             clientX: screenX,
             clientY: screenY,
+            screenX: screenX,
+            screenY: screenY,
             button: data.button,
             bubbles: true,
             cancelable: true
           });
+          
           const upEvent = new MouseEvent('mouseup', {
             clientX: screenX,
             clientY: screenY,
+            screenX: screenX,
+            screenY: screenY,
             button: data.button,
             bubbles: true,
             cancelable: true
           });
+          
+          if (targetElement) {
+            targetElement.dispatchEvent(downEvent);
+            targetElement.dispatchEvent(clickEvent);
+            targetElement.dispatchEvent(upEvent);
+          }
           document.dispatchEvent(downEvent);
+          document.dispatchEvent(clickEvent);
           document.dispatchEvent(upEvent);
           
         } else if (type === 'keyboard') {
@@ -223,15 +240,25 @@ function App() {
 
   const sendMouseClick = (e) => {
     if (!isHost && allowControl && videoRef.current) {
-      e.preventDefault(); // Prevent video pause/play on click
+      e.preventDefault();
+      e.stopPropagation();
+      
       const rect = videoRef.current.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
       const y = (e.clientY - rect.top) / rect.height;
+      
       socketRef.current.emit('remote-control', { 
         roomCode: roomCodeRef.current, 
         type: 'mouse-click', 
         data: { button: e.button, x, y } 
       });
+    }
+  };
+
+  const handleContextMenu = (e) => {
+    if (!isHost && allowControl) {
+      e.preventDefault();
+      e.stopPropagation();
     }
   };
 
@@ -484,10 +511,12 @@ function App() {
                     className="w-full h-full object-contain"
                     onMouseMove={sendMouseMove}
                     onMouseDown={sendMouseClick}
+                    onContextMenu={handleContextMenu}
                     onKeyDown={sendKeyboard}
                     tabIndex={0}
                     controlsList="nodownload nofullscreen noremoteplayback"
                     disablePictureInPicture
+                    style={{ pointerEvents: allowControl ? 'auto' : 'none' }}
                   />
                 )}
               </div>
