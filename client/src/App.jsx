@@ -376,13 +376,21 @@ function App() {
                   )}
                   
                   {!isHost && (
-                    <button
-                      onClick={toggleFullscreen}
-                      className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
-                    >
-                      {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                      {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                    </button>
+                    <>
+                      {allowControl && (
+                        <div className="flex items-center gap-2 bg-blue-500/20 text-blue-400 px-4 py-2 rounded-lg">
+                          <Shield className="w-5 h-5" />
+                          <span>Control Enabled</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={toggleFullscreen}
+                        className="flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+                      >
+                        {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                        {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
