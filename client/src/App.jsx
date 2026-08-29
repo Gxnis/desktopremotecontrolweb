@@ -88,16 +88,69 @@ function App() {
     socketRef.current.on('remote-control', ({ type, data }) => {
       if (isHost) {
         if (type === 'mouse-move') {
-          // Move mouse cursor on host
+          // Move mouse cursor on host using robot-like simulation
           const screenX = data.x * window.screen.width;
           const screenY = data.y * window.screen.height;
-          console.log('Remote mouse move:', screenX, screenY);
+          
+          // Create and dispatch mouse move event
+          const mouseEvent = new MouseEvent('mousemove', {
+            clientX: screenX,
+            clientY: screenY,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(mouseEvent);
+          
         } else if (type === 'mouse-click') {
           // Simulate mouse click on host
-          console.log('Remote mouse click:', data.button, data.x, data.y);
+          const screenX = data.x * window.screen.width;
+          const screenY = data.y * window.screen.height;
+          
+          const clickEvent = new MouseEvent('click', {
+            clientX: screenX,
+            clientY: screenY,
+            button: data.button,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(clickEvent);
+          
+          // Also dispatch mousedown and mouseup
+          const downEvent = new MouseEvent('mousedown', {
+            clientX: screenX,
+            clientY: screenY,
+            button: data.button,
+            bubbles: true,
+            cancelable: true
+          });
+          const upEvent = new MouseEvent('mouseup', {
+            clientX: screenX,
+            clientY: screenY,
+            button: data.button,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(downEvent);
+          document.dispatchEvent(upEvent);
+          
         } else if (type === 'keyboard') {
           // Simulate keyboard input on host
-          console.log('Remote keyboard:', data.key, data.keyCode);
+          const keyboardEvent = new KeyboardEvent('keydown', {
+            key: data.key,
+            keyCode: data.keyCode,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(keyboardEvent);
+          
+          // Also dispatch keyup
+          const keyupEvent = new KeyboardEvent('keyup', {
+            key: data.key,
+            keyCode: data.keyCode,
+            bubbles: true,
+            cancelable: true
+          });
+          document.dispatchEvent(keyupEvent);
         }
       }
     });
