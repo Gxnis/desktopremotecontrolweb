@@ -44,25 +44,47 @@ app.on('activate', () => {
 
 // IPC handlers for remote control
 ipcMain.on('remote-mouse-move', (event, { x, y }) => {
-  const screenX = Math.floor(x * robot.getScreenSize().width);
-  const screenY = Math.floor(y * robot.getScreenSize().height);
-  robot.moveMouse(screenX, screenY);
+  try {
+    const screenSize = robot.getScreenSize();
+    const screenX = Math.floor(x * screenSize.width);
+    const screenY = Math.floor(y * screenSize.height);
+    console.log('Moving mouse to:', screenX, screenY, 'from normalized:', x, y);
+    robot.moveMouse(screenX, screenY);
+  } catch (error) {
+    console.error('Error moving mouse:', error);
+  }
 });
 
 ipcMain.on('remote-mouse-click', (event, { button, x, y }) => {
-  const screenX = Math.floor(x * robot.getScreenSize().width);
-  const screenY = Math.floor(y * robot.getScreenSize().height);
-  robot.moveMouse(screenX, screenY);
-  
-  if (button === 0) {
-    robot.mouseClick('left');
-  } else if (button === 2) {
-    robot.mouseClick('right');
-  } else if (button === 1) {
-    robot.mouseClick('middle');
+  try {
+    const screenSize = robot.getScreenSize();
+    const screenX = Math.floor(x * screenSize.width);
+    const screenY = Math.floor(y * screenSize.height);
+    console.log('Clicking at:', screenX, screenY, 'button:', button);
+    
+    // Move to position first
+    robot.moveMouse(screenX, screenY);
+    
+    // Small delay to ensure position is set
+    setTimeout(() => {
+      if (button === 0) {
+        robot.mouseClick('left');
+      } else if (button === 2) {
+        robot.mouseClick('right');
+      } else if (button === 1) {
+        robot.mouseClick('middle');
+      }
+    }, 10);
+  } catch (error) {
+    console.error('Error clicking mouse:', error);
   }
 });
 
 ipcMain.on('remote-keyboard', (event, { key, keyCode }) => {
-  robot.keyTap(key);
+  try {
+    console.log('Keyboard key:', key, 'keyCode:', keyCode);
+    robot.keyTap(key);
+  } catch (error) {
+    console.error('Error with keyboard:', error);
+  }
 });
