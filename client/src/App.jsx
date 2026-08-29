@@ -87,87 +87,101 @@ function App() {
 
     socketRef.current.on('remote-control', ({ type, data }) => {
       if (isHost) {
+        // Check if running in Electron for system control
+        const isElectron = window.electronAPI?.isElectron?.();
+        
         if (type === 'mouse-move') {
-          // Move mouse cursor on host using robot-like simulation
-          const screenX = data.x * window.screen.width;
-          const screenY = data.y * window.screen.height;
-          
-          // Create and dispatch mouse move event at the correct screen position
-          const mouseEvent = new MouseEvent('mousemove', {
-            clientX: screenX,
-            clientY: screenY,
-            screenX: screenX,
-            screenY: screenY,
-            bubbles: true,
-            cancelable: true
-          });
-          document.elementFromPoint(screenX, screenY)?.dispatchEvent(mouseEvent);
-          document.dispatchEvent(mouseEvent);
+          if (isElectron) {
+            // Use Electron API for system control
+            window.electronAPI.remoteMouseMove(data.x, data.y);
+          } else {
+            // Fallback to DOM events for browser
+            const screenX = data.x * window.screen.width;
+            const screenY = data.y * window.screen.height;
+            const mouseEvent = new MouseEvent('mousemove', {
+              clientX: screenX,
+              clientY: screenY,
+              screenX: screenX,
+              screenY: screenY,
+              bubbles: true,
+              cancelable: true
+            });
+            document.elementFromPoint(screenX, screenY)?.dispatchEvent(mouseEvent);
+            document.dispatchEvent(mouseEvent);
+          }
           
         } else if (type === 'mouse-click') {
-          // Simulate mouse click on host
-          const screenX = data.x * window.screen.width;
-          const screenY = data.y * window.screen.height;
-          
-          const targetElement = document.elementFromPoint(screenX, screenY);
-          
-          const clickEvent = new MouseEvent('click', {
-            clientX: screenX,
-            clientY: screenY,
-            screenX: screenX,
-            screenY: screenY,
-            button: data.button,
-            bubbles: true,
-            cancelable: true
-          });
-          
-          const downEvent = new MouseEvent('mousedown', {
-            clientX: screenX,
-            clientY: screenY,
-            screenX: screenX,
-            screenY: screenY,
-            button: data.button,
-            bubbles: true,
-            cancelable: true
-          });
-          
-          const upEvent = new MouseEvent('mouseup', {
-            clientX: screenX,
-            clientY: screenY,
-            screenX: screenX,
-            screenY: screenY,
-            button: data.button,
-            bubbles: true,
-            cancelable: true
-          });
-          
-          if (targetElement) {
-            targetElement.dispatchEvent(downEvent);
-            targetElement.dispatchEvent(clickEvent);
-            targetElement.dispatchEvent(upEvent);
+          if (isElectron) {
+            // Use Electron API for system control
+            window.electronAPI.remoteMouseClick(data.button, data.x, data.y);
+          } else {
+            // Fallback to DOM events for browser
+            const screenX = data.x * window.screen.width;
+            const screenY = data.y * window.screen.height;
+            const targetElement = document.elementFromPoint(screenX, screenY);
+            
+            const clickEvent = new MouseEvent('click', {
+              clientX: screenX,
+              clientY: screenY,
+              screenX: screenX,
+              screenY: screenY,
+              button: data.button,
+              bubbles: true,
+              cancelable: true
+            });
+            
+            const downEvent = new MouseEvent('mousedown', {
+              clientX: screenX,
+              clientY: screenY,
+              screenX: screenX,
+              screenY: screenY,
+              button: data.button,
+              bubbles: true,
+              cancelable: true
+            });
+            
+            const upEvent = new MouseEvent('mouseup', {
+              clientX: screenX,
+              clientY: screenY,
+              screenX: screenX,
+              screenY: screenY,
+              button: data.button,
+              bubbles: true,
+              cancelable: true
+            });
+            
+            if (targetElement) {
+              targetElement.dispatchEvent(downEvent);
+              targetElement.dispatchEvent(clickEvent);
+              targetElement.dispatchEvent(upEvent);
+            }
+            document.dispatchEvent(downEvent);
+            document.dispatchEvent(clickEvent);
+            document.dispatchEvent(upEvent);
           }
-          document.dispatchEvent(downEvent);
-          document.dispatchEvent(clickEvent);
-          document.dispatchEvent(upEvent);
           
         } else if (type === 'keyboard') {
-          // Simulate keyboard input on host
-          const keyboardEvent = new KeyboardEvent('keydown', {
-            key: data.key,
-            keyCode: data.keyCode,
-            bubbles: true,
-            cancelable: true
-          });
-          document.dispatchEvent(keyboardEvent);
-          
-          // Also dispatch keyup
-          const keyupEvent = new KeyboardEvent('keyup', {
-            key: data.key,
-            keyCode: data.keyCode,
-            bubbles: true,
-            cancelable: true
-          });
-          document.dispatchEvent(keyupEvent);
+          if (isElectron) {
+            // Use Electron API for system control
+            window.electronAPI.remoteKeyboard(data.key, data.keyCode);
+          } else {
+            // Fallback to DOM events for browser
+            const keyboardEvent = new KeyboardEvent('keydown', {
+              key: data.key,
+              keyCode: data.keyCode,
+              bubbles: true,
+              cancelable: true
+            });
+            document.dispatchEvent(keyboardEvent);
+            
+            const keyupEvent = new KeyboardEvent('keyup', {
+              key: data.key,
+              keyCode: data.keyCode,
+              bubbles: true,
+              cancelable: true
+            });
+            document.dispatchEvent(keyupEvent);
+          }
         }
       }
     });
