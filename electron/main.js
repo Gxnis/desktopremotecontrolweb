@@ -65,16 +65,19 @@ ipcMain.on('remote-mouse-click', (event, { button, x, y }) => {
     // Move to position first
     robot.moveMouse(screenX, screenY);
     
-    // Small delay to ensure position is set
+    // Use mouseToggle for more reliable clicking
     setTimeout(() => {
       if (button === 0) {
-        robot.mouseClick('left');
+        robot.mouseToggle('down', 'left');
+        setTimeout(() => robot.mouseToggle('up', 'left'), 50);
       } else if (button === 2) {
-        robot.mouseClick('right');
+        robot.mouseToggle('down', 'right');
+        setTimeout(() => robot.mouseToggle('up', 'right'), 50);
       } else if (button === 1) {
-        robot.mouseClick('middle');
+        robot.mouseToggle('down', 'middle');
+        setTimeout(() => robot.mouseToggle('up', 'middle'), 50);
       }
-    }, 10);
+    }, 20);
   } catch (error) {
     console.error('Error clicking mouse:', error);
   }
