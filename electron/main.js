@@ -67,16 +67,34 @@ ipcMain.on('remote-mouse-click', async (event, { button, x, y }) => {
     console.log('Click at:', screenX, screenY, 'button:', button);
     
     // Move mouse first
-    await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${screenX},${screenY})"`);
+    await execPromise(`powershell -Command "[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${screenX},${screenY})"`);
     
     // Small delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 150));
     
-    // Click using PowerShell
+    // Click using SendInput API (more reliable)
     if (button === 0) {
-      await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; Add-Type -Name User32 -Namespace Win32 -MemberDefinition '[DllImport(\\\"user32.dll\\\")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);'; $Win32::User32::mouse_event(0x0002, 0, 0, 0, 0); $Win32::User32::mouse_event(0x0004, 0, 0, 0, 0)"`);
+      // Left click
+      await execPromise(`powershell -Command "$signature = @' 
+[DllImport(\\\"user32.dll\\\")] 
+public static extern void SendInput(int nInputs, ref INPUT pInputs, int cbSize);
+[DllImport(\\\"user32.dll\\\")] 
+public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
+public struct INPUT { public int type; public INPUTUNION U; }
+public struct INPUTUNION { public MOUSEINPUT mi; }
+public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
+'@; Add-Type -MemberDefinition $signature -Name User32 -Namespace Win32; $input = New-Object Win32.INPUT; $input.type = 0; $input.U.mi = New-Object Win32.MOUSEINPUT; $input.U.mi.dwFlags = 0x0002; [Win32.User32]::SendInput(1, [ref]$input, 28); $input.U.mi.dwFlags = 0x0004; [Win32.User32]::SendInput(1, [ref]$input, 28)"`);
     } else if (button === 2) {
-      await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; Add-Type -Name User32 -Namespace Win32 -MemberDefinition '[DllImport(\\\"user32.dll\\\")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);'; $Win32::User32::mouse_event(0x0008, 0, 0, 0, 0); $Win32::User32::mouse_event(0x0010, 0, 0, 0, 0)"`);
+      // Right click
+      await execPromise(`powershell -Command "$signature = @' 
+[DllImport(\\\"user32.dll\\\")] 
+public static extern void SendInput(int nInputs, ref INPUT pInputs, int cbSize);
+[DllImport(\\\"user32.dll\\\")] 
+public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
+public struct INPUT { public int type; public INPUTUNION U; }
+public struct INPUTUNION { public MOUSEINPUT mi; }
+public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
+'@; Add-Type -MemberDefinition $signature -Name User32 -Namespace Win32; $input = New-Object Win32.INPUT; $input.type = 0; $input.U.mi = New-Object Win32.MOUSEINPUT; $input.U.mi.dwFlags = 0x0008; [Win32.User32]::SendInput(1, [ref]$input, 28); $input.U.mi.dwFlags = 0x0010; [Win32.User32]::SendInput(1, [ref]$input, 28)"`);
     }
     
     console.log('Click completed');
