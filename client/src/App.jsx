@@ -260,7 +260,6 @@ function App() {
     if (!isHost && allowControl && videoRef.current) {
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
       
       const rect = videoRef.current.getBoundingClientRect();
       const x = (e.clientX - rect.left) / rect.width;
@@ -281,7 +280,6 @@ function App() {
     if (!isHost && allowControl) {
       e.preventDefault();
       e.stopPropagation();
-      e.stopImmediatePropagation();
       return false;
     }
   };
