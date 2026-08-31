@@ -1,8 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { exec } = require('child_process');
-const util = require('util');
-const execPromise = util.promisify(exec);
+const { mouseMove, mouseClick, typeString, keyPress } = require('node-native-win-utils');
 
 let mainWindow;
 
@@ -47,12 +45,9 @@ app.on('activate', () => {
 // IPC handlers for remote control
 ipcMain.on('remote-mouse-move', async (event, { x, y }) => {
   try {
-    const screenSize = await getScreenSize();
-    const screenX = Math.floor(x * screenSize.width);
-    const screenY = Math.floor(y * screenSize.height);
-    
-    // Use PowerShell to move mouse
-    await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${screenX},${screenY})"`);
+    const screenX = Math.floor(x * 1920);
+    const screenY = Math.floor(y * 1080);
+    mouseMove(screenX, screenY);
   } catch (error) {
     console.error('Error moving mouse:', error);
   }
@@ -60,41 +55,22 @@ ipcMain.on('remote-mouse-move', async (event, { x, y }) => {
 
 ipcMain.on('remote-mouse-click', async (event, { button, x, y }) => {
   try {
-    const screenSize = await getScreenSize();
-    const screenX = Math.floor(x * screenSize.width);
-    const screenY = Math.floor(y * screenSize.height);
+    const screenX = Math.floor(x * 1920);
+    const screenY = Math.floor(y * 1080);
     
     console.log('Click at:', screenX, screenY, 'button:', button);
     
-    // Move mouse first
-    await execPromise(`powershell -Command "[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${screenX},${screenY})"`);
+    mouseMove(screenX, screenY);
     
-    // Small delay
-    await new Promise(resolve => setTimeout(resolve, 150));
+    // Small delay to ensure position is set
+    await new Promise(resolve => setTimeout(resolve, 50));
     
-    // Click using SendInput API (more reliable)
     if (button === 0) {
-      // Left click
-      await execPromise(`powershell -Command "$signature = @' 
-[DllImport(\\\"user32.dll\\\")] 
-public static extern void SendInput(int nInputs, ref INPUT pInputs, int cbSize);
-[DllImport(\\\"user32.dll\\\")] 
-public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
-public struct INPUT { public int type; public INPUTUNION U; }
-public struct INPUTUNION { public MOUSEINPUT mi; }
-public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
-'@; Add-Type -MemberDefinition $signature -Name User32 -Namespace Win32; $input = New-Object Win32.INPUT; $input.type = 0; $input.U.mi = New-Object Win32.MOUSEINPUT; $input.U.mi.dwFlags = 0x0002; [Win32.User32]::SendInput(1, [ref]$input, 28); $input.U.mi.dwFlags = 0x0004; [Win32.User32]::SendInput(1, [ref]$input, 28)"`);
+      mouseClick('left');
     } else if (button === 2) {
-      // Right click
-      await execPromise(`powershell -Command "$signature = @' 
-[DllImport(\\\"user32.dll\\\")] 
-public static extern void SendInput(int nInputs, ref INPUT pInputs, int cbSize);
-[DllImport(\\\"user32.dll\\\")] 
-public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);
-public struct INPUT { public int type; public INPUTUNION U; }
-public struct INPUTUNION { public MOUSEINPUT mi; }
-public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public IntPtr dwExtraInfo; }
-'@; Add-Type -MemberDefinition $signature -Name User32 -Namespace Win32; $input = New-Object Win32.INPUT; $input.type = 0; $input.U.mi = New-Object Win32.MOUSEINPUT; $input.U.mi.dwFlags = 0x0008; [Win32.User32]::SendInput(1, [ref]$input, 28); $input.U.mi.dwFlags = 0x0010; [Win32.User32]::SendInput(1, [ref]$input, 28)"`);
+      mouseClick('right');
+    } else if (button === 1) {
+      mouseClick('middle');
     }
     
     console.log('Click completed');
@@ -105,19 +81,9 @@ public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; 
 
 ipcMain.on('remote-keyboard', async (event, { key, keyCode }) => {
   try {
-    // Use PowerShell for keyboard input
-    await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${key}')"`);
+    console.log('Keyboard key:', key);
+    typeString(key, 10);
   } catch (error) {
     console.error('Error with keyboard:', error);
   }
 });
-
-async function getScreenSize() {
-  try {
-    const { stdout } = await execPromise('powershell -Command "Get-WmiObject -Class Win32_DesktopMonitor | Select-Object ScreenWidth,ScreenHeight"');
-    // Parse output or use default
-    return { width: 1920, height: 1080 };
-  } catch (error) {
-    return { width: 1920, height: 1080 };
-  }
-}
