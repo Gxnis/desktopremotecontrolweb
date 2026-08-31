@@ -1,6 +1,6 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const robot = require('robotjs');
+const { mouse, screen, keyboard, Key, Button } = require('@nut-tree/nut-js');
 
 let mainWindow;
 
@@ -43,33 +43,41 @@ app.on('activate', () => {
 });
 
 // IPC handlers for remote control
-ipcMain.on('remote-mouse-move', (event, { x, y }) => {
+ipcMain.on('remote-mouse-move', async (event, { x, y }) => {
   try {
-    const screenSize = robot.getScreenSize();
+    const screenSize = await screen.size();
     const screenX = Math.floor(x * screenSize.width);
     const screenY = Math.floor(y * screenSize.height);
-    robot.moveMouse(screenX, screenY);
+    await mouse.setPosition({ x: screenX, y: screenY });
   } catch (error) {
     console.error('Error moving mouse:', error);
   }
 });
 
-ipcMain.on('remote-mouse-click', (event, { button, x, y }) => {
+ipcMain.on('remote-mouse-click', async (event, { button, x, y }) => {
   try {
-    const screenSize = robot.getScreenSize();
+    const screenSize = await screen.size();
     const screenX = Math.floor(x * screenSize.width);
     const screenY = Math.floor(y * screenSize.height);
     
-    robot.moveMouse(screenX, screenY);
-    robot.mouseClick(button === 0 ? 'left' : button === 2 ? 'right' : 'middle');
+    await mouse.setPosition({ x: screenX, y: screenY });
+    
+    if (button === 0) {
+      await mouse.click(Button.LEFT);
+    } else if (button === 2) {
+      await mouse.click(Button.RIGHT);
+    } else if (button === 1) {
+      await mouse.click(Button.MIDDLE);
+    }
   } catch (error) {
     console.error('Error clicking mouse:', error);
   }
 });
 
-ipcMain.on('remote-keyboard', (event, { key, keyCode }) => {
+ipcMain.on('remote-keyboard', async (event, { key, keyCode }) => {
   try {
-    robot.keyTap(key);
+    await keyboard.pressKey(Key[key.toUpperCase()] || key);
+    await keyboard.releaseKey(Key[key.toUpperCase()] || key);
   } catch (error) {
     console.error('Error with keyboard:', error);
   }
