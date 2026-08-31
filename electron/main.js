@@ -48,7 +48,6 @@ ipcMain.on('remote-mouse-move', (event, { x, y }) => {
     const screenSize = robot.getScreenSize();
     const screenX = Math.floor(x * screenSize.width);
     const screenY = Math.floor(y * screenSize.height);
-    console.log('Moving mouse to:', screenX, screenY, 'from normalized:', x, y);
     robot.moveMouse(screenX, screenY);
   } catch (error) {
     console.error('Error moving mouse:', error);
@@ -60,24 +59,9 @@ ipcMain.on('remote-mouse-click', (event, { button, x, y }) => {
     const screenSize = robot.getScreenSize();
     const screenX = Math.floor(x * screenSize.width);
     const screenY = Math.floor(y * screenSize.height);
-    console.log('Clicking at:', screenX, screenY, 'button:', button);
     
-    // Move to position first
     robot.moveMouse(screenX, screenY);
-    
-    // Use mouseToggle for more reliable clicking
-    setTimeout(() => {
-      if (button === 0) {
-        robot.mouseToggle('down', 'left');
-        setTimeout(() => robot.mouseToggle('up', 'left'), 50);
-      } else if (button === 2) {
-        robot.mouseToggle('down', 'right');
-        setTimeout(() => robot.mouseToggle('up', 'right'), 50);
-      } else if (button === 1) {
-        robot.mouseToggle('down', 'middle');
-        setTimeout(() => robot.mouseToggle('up', 'middle'), 50);
-      }
-    }, 20);
+    robot.mouseClick(button === 0 ? 'left' : button === 2 ? 'right' : 'middle');
   } catch (error) {
     console.error('Error clicking mouse:', error);
   }
@@ -85,7 +69,6 @@ ipcMain.on('remote-mouse-click', (event, { button, x, y }) => {
 
 ipcMain.on('remote-keyboard', (event, { key, keyCode }) => {
   try {
-    console.log('Keyboard key:', key, 'keyCode:', keyCode);
     robot.keyTap(key);
   } catch (error) {
     console.error('Error with keyboard:', error);

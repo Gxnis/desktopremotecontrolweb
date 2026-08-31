@@ -242,25 +242,11 @@ function App() {
   const sendMouseMove = (e) => {
     if (!isHost && allowControl && videoRef.current) {
       const rect = videoRef.current.getBoundingClientRect();
-      const videoWidth = videoRef.current.videoWidth || rect.width;
-      const videoHeight = videoRef.current.videoHeight || rect.height;
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
       
-      // Calculate position within the video content (accounting for letterboxing)
-      const scaleX = videoWidth / rect.width;
-      const scaleY = videoHeight / rect.height;
-      const scale = Math.min(scaleX, scaleY);
-      
-      const offsetX = (rect.width - videoWidth / scale) / 2;
-      const offsetY = (rect.height - videoHeight / scale) / 2;
-      
-      const x = ((e.clientX - rect.left - offsetX) / (videoWidth / scale));
-      const y = ((e.clientY - rect.top - offsetY) / (videoHeight / scale));
-      
-      // Clamp values to 0-1 range
       const clampedX = Math.max(0, Math.min(1, x));
       const clampedY = Math.max(0, Math.min(1, y));
-      
-      console.log('Mouse move - normalized:', clampedX, clampedY, 'raw:', x, y, 'video dims:', videoWidth, videoHeight);
       
       socketRef.current.emit('remote-control', { 
         roomCode: roomCodeRef.current, 
@@ -277,25 +263,11 @@ function App() {
       e.stopImmediatePropagation();
       
       const rect = videoRef.current.getBoundingClientRect();
-      const videoWidth = videoRef.current.videoWidth || rect.width;
-      const videoHeight = videoRef.current.videoHeight || rect.height;
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
       
-      // Calculate position within the video content (accounting for letterboxing)
-      const scaleX = videoWidth / rect.width;
-      const scaleY = videoHeight / rect.height;
-      const scale = Math.min(scaleX, scaleY);
-      
-      const offsetX = (rect.width - videoWidth / scale) / 2;
-      const offsetY = (rect.height - videoHeight / scale) / 2;
-      
-      const x = ((e.clientX - rect.left - offsetX) / (videoWidth / scale));
-      const y = ((e.clientY - rect.top - offsetY) / (videoHeight / scale));
-      
-      // Clamp values to 0-1 range
       const clampedX = Math.max(0, Math.min(1, x));
       const clampedY = Math.max(0, Math.min(1, y));
-      
-      console.log('Mouse click - normalized:', clampedX, clampedY, 'button:', e.button, 'raw:', x, y, 'video dims:', videoWidth, videoHeight);
       
       socketRef.current.emit('remote-control', { 
         roomCode: roomCodeRef.current, 
