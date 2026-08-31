@@ -60,15 +60,28 @@ ipcMain.on('remote-mouse-click', async (event, { button, x, y }) => {
     const screenX = Math.floor(x * screenSize.width);
     const screenY = Math.floor(y * screenSize.height);
     
+    console.log('Click at:', screenX, screenY, 'button:', button);
+    
     await mouse.setPosition({ x: screenX, y: screenY });
     
+    // Small delay to ensure position is set
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
     if (button === 0) {
-      await mouse.click(Button.LEFT);
+      await mouse.toggle(Button.LEFT, true);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await mouse.toggle(Button.LEFT, false);
     } else if (button === 2) {
-      await mouse.click(Button.RIGHT);
+      await mouse.toggle(Button.RIGHT, true);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await mouse.toggle(Button.RIGHT, false);
     } else if (button === 1) {
-      await mouse.click(Button.MIDDLE);
+      await mouse.toggle(Button.MIDDLE, true);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await mouse.toggle(Button.MIDDLE, false);
     }
+    
+    console.log('Click completed');
   } catch (error) {
     console.error('Error clicking mouse:', error);
   }
