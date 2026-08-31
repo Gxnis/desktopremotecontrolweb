@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { mouse, screen, keyboard, Key, Button } = require('@nut-tree/nut-js');
+const { exec } = require('child_process');
+const util = require('util');
+const execPromise = util.promisify(exec);
 
 let mainWindow;
 
@@ -45,10 +47,12 @@ app.on('activate', () => {
 // IPC handlers for remote control
 ipcMain.on('remote-mouse-move', async (event, { x, y }) => {
   try {
-    const screenSize = await screen.size();
+    const screenSize = await getScreenSize();
     const screenX = Math.floor(x * screenSize.width);
     const screenY = Math.floor(y * screenSize.height);
-    await mouse.setPosition({ x: screenX, y: screenY });
+    
+    // Use PowerShell to move mouse
+    await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${screenX},${screenY})"`);
   } catch (error) {
     console.error('Error moving mouse:', error);
   }
@@ -56,29 +60,23 @@ ipcMain.on('remote-mouse-move', async (event, { x, y }) => {
 
 ipcMain.on('remote-mouse-click', async (event, { button, x, y }) => {
   try {
-    const screenSize = await screen.size();
+    const screenSize = await getScreenSize();
     const screenX = Math.floor(x * screenSize.width);
     const screenY = Math.floor(y * screenSize.height);
     
     console.log('Click at:', screenX, screenY, 'button:', button);
     
-    await mouse.setPosition({ x: screenX, y: screenY });
+    // Move mouse first
+    await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(${screenX},${screenY})"`);
     
-    // Small delay to ensure position is set
-    await new Promise(resolve => setTimeout(resolve, 50));
+    // Small delay
+    await new Promise(resolve => setTimeout(resolve, 100));
     
+    // Click using PowerShell
     if (button === 0) {
-      await mouse.toggle(Button.LEFT, true);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      await mouse.toggle(Button.LEFT, false);
+      await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; Add-Type -Name User32 -Namespace Win32 -MemberDefinition '[DllImport(\\\"user32.dll\\\")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);'; $Win32::User32::mouse_event(0x0002, 0, 0, 0, 0); $Win32::User32::mouse_event(0x0004, 0, 0, 0, 0)"`);
     } else if (button === 2) {
-      await mouse.toggle(Button.RIGHT, true);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      await mouse.toggle(Button.RIGHT, false);
-    } else if (button === 1) {
-      await mouse.toggle(Button.MIDDLE, true);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      await mouse.toggle(Button.MIDDLE, false);
+      await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; Add-Type -Name User32 -Namespace Win32 -MemberDefinition '[DllImport(\\\"user32.dll\\\")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint cButtons, uint dwExtraInfo);'; $Win32::User32::mouse_event(0x0008, 0, 0, 0, 0); $Win32::User32::mouse_event(0x0010, 0, 0, 0, 0)"`);
     }
     
     console.log('Click completed');
@@ -89,9 +87,19 @@ ipcMain.on('remote-mouse-click', async (event, { button, x, y }) => {
 
 ipcMain.on('remote-keyboard', async (event, { key, keyCode }) => {
   try {
-    await keyboard.pressKey(Key[key.toUpperCase()] || key);
-    await keyboard.releaseKey(Key[key.toUpperCase()] || key);
+    // Use PowerShell for keyboard input
+    await execPromise(`powershell -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${key}')"`);
   } catch (error) {
     console.error('Error with keyboard:', error);
   }
 });
+
+async function getScreenSize() {
+  try {
+    const { stdout } = await execPromise('powershell -Command "Get-WmiObject -Class Win32_DesktopMonitor | Select-Object ScreenWidth,ScreenHeight"');
+    // Parse output or use default
+    return { width: 1920, height: 1080 };
+  } catch (error) {
+    return { width: 1920, height: 1080 };
+  }
+}
