@@ -1,6 +1,9 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const { mouseMove, mouseClick, typeString, keyPress } = require('node-native-win-utils');
+const { Hardware } = require('keysender');
+
+// Create Hardware instance for system-wide control
+const hardware = new Hardware();
 
 let mainWindow;
 
@@ -47,7 +50,7 @@ ipcMain.on('remote-mouse-move', async (event, { x, y }) => {
   try {
     const screenX = Math.floor(x * 1920);
     const screenY = Math.floor(y * 1080);
-    mouseMove(screenX, screenY);
+    await hardware.mouse.moveTo(screenX, screenY);
   } catch (error) {
     console.error('Error moving mouse:', error);
   }
@@ -60,17 +63,17 @@ ipcMain.on('remote-mouse-click', async (event, { button, x, y }) => {
     
     console.log('Click at:', screenX, screenY, 'button:', button);
     
-    mouseMove(screenX, screenY);
+    await hardware.mouse.moveTo(screenX, screenY);
     
     // Small delay to ensure position is set
     await new Promise(resolve => setTimeout(resolve, 50));
     
     if (button === 0) {
-      mouseClick('left');
+      await hardware.mouse.click('left');
     } else if (button === 2) {
-      mouseClick('right');
+      await hardware.mouse.click('right');
     } else if (button === 1) {
-      mouseClick('middle');
+      await hardware.mouse.click('middle');
     }
     
     console.log('Click completed');
@@ -82,7 +85,7 @@ ipcMain.on('remote-mouse-click', async (event, { button, x, y }) => {
 ipcMain.on('remote-keyboard', async (event, { key, keyCode }) => {
   try {
     console.log('Keyboard key:', key);
-    typeString(key, 10);
+    await hardware.keyboard.printText(key);
   } catch (error) {
     console.error('Error with keyboard:', error);
   }

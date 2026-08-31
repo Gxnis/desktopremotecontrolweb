@@ -14,7 +14,7 @@
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
     "uuid": "^9.0.0",
-    "node-native-win-utils": "^1.0.0"
+    "keysender": "^1.2.0"
   },
   "devDependencies": {
     "electron": "^26.0.0"
