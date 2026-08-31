@@ -62,7 +62,10 @@ io.on('connection', (socket) => {
   socket.on('remote-control', ({ roomCode, type, data }) => {
     const room = rooms.get(roomCode);
     if (room && room.controlEnabled && socket.id !== room.host) {
+      console.log(`[REMOTE CONTROL] Room: ${roomCode}, Type: ${type}, Data:`, data);
       io.to(room.host).emit('remote-control', { type, data });
+    } else {
+      console.log(`[REMOTE CONTROL BLOCKED] Room: ${roomCode}, Type: ${type}, ControlEnabled: ${room?.controlEnabled}, IsHost: ${socket.id === room?.host}`);
     }
   });
 

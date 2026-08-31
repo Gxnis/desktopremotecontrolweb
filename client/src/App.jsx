@@ -87,14 +87,18 @@ function App() {
 
     socketRef.current.on('remote-control', ({ type, data }) => {
       if (isHost) {
+        console.log(`[HOST RECEIVED] Type: ${type}, Data:`, data);
+        
         // Check if running in Electron for system control
         const isElectron = window.electronAPI?.isElectron?.();
+        console.log(`[HOST] IsElectron: ${isElectron}`);
         
         if (type === 'mouse-move') {
           if (isElectron) {
-            // Use Electron API for system control
+            console.log(`[HOST] Using Electron API for mouse move`);
             window.electronAPI.remoteMouseMove(data.x, data.y);
           } else {
+            console.log(`[HOST] Using DOM events for mouse move (browser-only)`);
             // Fallback to DOM events for browser
             const screenX = data.x * window.screen.width;
             const screenY = data.y * window.screen.height;
@@ -112,13 +116,16 @@ function App() {
           
         } else if (type === 'mouse-click') {
           if (isElectron) {
-            // Use Electron API for system control
+            console.log(`[HOST] Using Electron API for mouse click`);
             window.electronAPI.remoteMouseClick(data.button, data.x, data.y);
           } else {
+            console.log(`[HOST] Using DOM events for mouse click (browser-only)`);
             // Fallback to DOM events for browser
             const screenX = data.x * window.screen.width;
             const screenY = data.y * window.screen.height;
             const targetElement = document.elementFromPoint(screenX, screenY);
+            
+            console.log(`[HOST] Target element:`, targetElement);
             
             const clickEvent = new MouseEvent('click', {
               clientX: screenX,
@@ -162,9 +169,10 @@ function App() {
           
         } else if (type === 'keyboard') {
           if (isElectron) {
-            // Use Electron API for system control
+            console.log(`[HOST] Using Electron API for keyboard`);
             window.electronAPI.remoteKeyboard(data.key, data.keyCode);
           } else {
+            console.log(`[HOST] Using DOM events for keyboard (browser-only)`);
             // Fallback to DOM events for browser
             const keyboardEvent = new KeyboardEvent('keydown', {
               key: data.key,
